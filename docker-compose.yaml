@@ -1,0 +1,31 @@
+version: '3.8'
+services:
+  pp_final_project:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: jett_pp_project_img
+    container_name: jett_pp_project
+    volumes:
+      - .:/workspace
+
+    ports:
+      - "8882:8882"
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+    # dns:
+    #   - 8.8.8.8
+    #   - 8.8.4.4
+
+
+    # stdin_open: true  
+    # tty: true          
+    working_dir: "/workspace"
+
