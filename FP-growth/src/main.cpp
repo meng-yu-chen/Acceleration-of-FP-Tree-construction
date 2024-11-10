@@ -9,11 +9,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <iomanip> 
 
 // include openmp
 #include <omp.h>
 
+// include timer
+#include "CycleTimer.h"
 #include "fptree.hpp"
+
 using namespace std;
 namespace fs = std::filesystem;
 
@@ -62,23 +66,24 @@ Transaction_Data test_read_dataset_from_path(const string& dataPath){
     file.close();
 
 
+    //// for debugging
     // output
-    cout << "Vector內容：" << endl;
+    // cout << "Vector內容：" << endl;
 
-    // iterate each vector
-    for (const auto& vec : transaction_Data.transactions) {
+    // // iterate each vector
+    // for (const auto& vec : transaction_Data.transactions) {
         
-        // iterate each element
-        for (const auto& item : vec) {
-            cout << item << " ";  
-        }
-        cout << endl;  
-    }
+    //     // iterate each element
+    //     for (const auto& item : vec) {
+    //         cout << item << " ";  
+    //     }
+    //     cout << endl;  
+    // }
 
-    cout << "Set內容：" << endl;
-    for (const auto& item : transaction_Data.ItemSets) {
-        cout << item << endl;
-    }
+    // cout << "Set內容：" << endl;
+    // for (const auto& item : transaction_Data.ItemSets) {
+    //     cout << item << endl;
+    // }
 
     return transaction_Data;
 }
@@ -300,14 +305,24 @@ int main(int argc, char *argv[])
             // cout << "entry.path(): " << entry.path() << "\n";
             Transaction_Data transaction_Data = test_read_dataset_from_path(entry.path());
 
-            if (entry.path() == "/workspace/FP-growth/dataset/test_data1.txt") 
+            if (entry.path() == "/workspace/FP-growth/dataset/test_data1.txt") {
+
+                //Run implementations
+                double start_time = CycleTimer::currentSeconds();
                 test_1(transaction_Data);
+                double exec_time = CycleTimer::currentSeconds() - start_time;
+                cout << "Test case1 - " << thread_count << " thread: " << fixed << setprecision(4) << exec_time <<"s\n";
             
-            else if (entry.path() == "/workspace/FP-growth/dataset/test_data2.txt")
+            } else if (entry.path() == "/workspace/FP-growth/dataset/test_data2.txt") {
+
+                 //Run implementations
+                double start_time = CycleTimer::currentSeconds();
                 test_2(transaction_Data);
+                double exec_time = CycleTimer::currentSeconds() - start_time;
+                cout << "Test case2 - " << thread_count << " thread: " << fixed << setprecision(4) << exec_time <<"s\n";
                 // cout << "skip test2." << endl;
 
-            else if (entry.path() == "/workspace/FP-growth/dataset/test_data3.txt")
+            } else if (entry.path() == "/workspace/FP-growth/dataset/test_data3.txt")
                 // test_3(transaction_Data);
                 cout << "skip test3." << endl;
             
