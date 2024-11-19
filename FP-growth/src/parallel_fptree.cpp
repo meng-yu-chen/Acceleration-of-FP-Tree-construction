@@ -5,11 +5,15 @@
 #include <utility>
 #include <execution>
 #include <vector>
+#include <string>
+#include <iomanip>
 using namespace std;
 
 // include openmp
 #include <omp.h>
 
+// include timer
+#include "CycleTimer.h"
 #include "fptree.hpp"
 
 
@@ -84,9 +88,10 @@ void merge_trees(shared_ptr<FPNode> global_root, shared_ptr<FPNode> local_root, 
 }
 
 
-FPTree::FPTree(const vector<Transaction>& transactions, uint64_t minimum_support_threshold) :
+FPTree::FPTree(const vector<Transaction>& transactions, uint64_t minimum_support_threshold, string fileName) :
     root( make_shared<FPNode>( Item{}, nullptr ) ), header_table(),
-    minimum_support_threshold( minimum_support_threshold )
+    minimum_support_threshold( minimum_support_threshold ),
+    fileName( fileName )
 {
     //// scan the transactions counting the frequency of each item
     
@@ -102,6 +107,9 @@ FPTree::FPTree(const vector<Transaction>& transactions, uint64_t minimum_support
 
     //// Parallel item frequency counting using map-reduce
     int num_threads;
+
+    // start build freq item time
+    double data_start_time = CycleTimer::currentSeconds();
     
     // map step: let threads to parallel count frequency by each item
     # pragma omp parallel
@@ -138,6 +146,12 @@ FPTree::FPTree(const vector<Transaction>& transactions, uint64_t minimum_support
         }
     }
 
+
+    // end build freq item time
+    double data_end_time = CycleTimer::currentSeconds();
+
+    if (fileName != "")
+        cout << "Data build finish!\nTest " << fileName << " - " << num_threads << " thread: " << fixed << setprecision(4) << (data_end_time - data_start_time) * 1000.0 <<"ms\n";
     
 
     // keep only items which have a frequency greater or equal than the minimum support threshold
@@ -183,7 +197,7 @@ FPTree::FPTree(const vector<Transaction>& transactions, uint64_t minimum_support
         items_vector.begin(), items_vector.end());
 
 
-    //// for debug
+    // for debug
     // for ( auto it = frequency_by_item.cbegin(); it != frequency_by_item.cend(); it++ ) {
         
     //     const uint64_t item_frequency = (*it).second;
@@ -192,6 +206,8 @@ FPTree::FPTree(const vector<Transaction>& transactions, uint64_t minimum_support
 
 
     //// start tree construction, build hole fp tree and header table
+    // start build fp tree time
+    double tree_start_time = CycleTimer::currentSeconds();
 
     // declare local root and local header table for each threads
     vector<shared_ptr<FPNode>> local_roots(max_num_threads, nullptr);
@@ -287,6 +303,13 @@ FPTree::FPTree(const vector<Transaction>& transactions, uint64_t minimum_support
     for (int tid = 0; tid < num_threads; tid++) {
         merge_trees(root, local_roots[tid], header_table, local_header_tables[tid]);
     }
+
+    // finish build fp tree time
+    double tree_end_time = CycleTimer::currentSeconds();
+
+    if (fileName != "")
+        cout << "Tree build finish!\nTest " << fileName << " - " << num_threads << " thread: " << fixed << setprecision(4) << (tree_end_time - tree_start_time) * 1000.0 <<"ms\n";
+    
 
     //// for debug
     // for (const auto& [item, node_ptr] : header_table) {

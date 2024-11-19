@@ -90,7 +90,7 @@ Transaction_Data test_read_dataset_from_path(const string& dataPath){
 
 
 
-void test_1(Transaction_Data transaction_Data)
+void test_1(Transaction_Data transaction_Data, string fileName)
 {
 
     cout << "  !!!!!!!! In test 1 function !!!!!!!!\n";
@@ -117,7 +117,7 @@ void test_1(Transaction_Data transaction_Data)
 
     const uint64_t minimum_support_threshold = 2;
 
-    const FPTree fptree{ transaction_Data.transactions, minimum_support_threshold };
+    const FPTree fptree{ transaction_Data.transactions, minimum_support_threshold, fileName };
 
     const set<Pattern> patterns = fptree_growth( fptree );
 
@@ -143,7 +143,7 @@ void test_1(Transaction_Data transaction_Data)
     assert( patterns.count( { { e }, 3 } ) );
 }
 
-void test_2(Transaction_Data transaction_Data)
+void test_2(Transaction_Data transaction_Data, string fileName)
 {
 
     cout << "  !!!!!!!! In test 2 function !!!!!!!!\n";
@@ -165,7 +165,7 @@ void test_2(Transaction_Data transaction_Data)
 
     const uint64_t minimum_support_threshold = 3;
 
-    const FPTree fptree{ transaction_Data.transactions, minimum_support_threshold };
+    const FPTree fptree{ transaction_Data.transactions, minimum_support_threshold, fileName };
 
     const set<Pattern> patterns = fptree_growth( fptree );
 
@@ -191,7 +191,7 @@ void test_2(Transaction_Data transaction_Data)
     assert( patterns.count( { { b }, 6 } ) );
 }
 
-void test_3(Transaction_Data transaction_Data)
+void test_3(Transaction_Data transaction_Data, string fileName)
 {
     const Item a{ "a" };
     const Item b{ "b" };
@@ -221,7 +221,7 @@ void test_3(Transaction_Data transaction_Data)
 
     const uint64_t minimum_support_threshold = 3;
 
-    const FPTree fptree{ transaction_Data.transactions, minimum_support_threshold };
+    const FPTree fptree{ transaction_Data.transactions, minimum_support_threshold, fileName };
 
     const set<Pattern> patterns = fptree_growth( fptree );
 
@@ -255,6 +255,7 @@ int main(int argc, char *argv[])
     // default one thread
     int thread_count = 1;
     int opt;
+    const uint64_t minimum_support_threshold = 3;
 
     // get number of thread from cmd
     if ((opt = getopt(argc, argv, "t:")) != -1) {
@@ -301,34 +302,53 @@ int main(int argc, char *argv[])
 
     for (auto& entry : fs::directory_iterator(data_folderPath)) {
         
+        
         if (entry.path().extension() == ".txt") {
+
             // cout << "entry.path(): " << entry.path() << "\n";
             Transaction_Data transaction_Data = test_read_dataset_from_path(entry.path());
+
+            // get file name
+            string filePath = entry.path().string();
+            size_t pos = filePath.find_last_of("/\\"); 
+            string fileName = filePath.substr(pos + 1);
 
             if (entry.path() == "/workspace/FP-growth/dataset/test_data1.txt") {
 
                 //Run implementations
-                double start_time = CycleTimer::currentSeconds();
-                test_1(transaction_Data);
-                double exec_time = CycleTimer::currentSeconds() - start_time;
-                cout << "Test case1 - " << thread_count << " thread: " << fixed << setprecision(4) << exec_time <<"s\n";
-            
+                // double start_time = CycleTimer::currentSeconds();
+                // test_1(transaction_Data);
+                // double exec_time = CycleTimer::currentSeconds() - start_time;
+                // cout << "Test case1 - " << thread_count << " thread: " << fixed << setprecision(4) << exec_time <<"s\n";
+                cout << "skip test1." << endl;
+
             } else if (entry.path() == "/workspace/FP-growth/dataset/test_data2.txt") {
 
-                 //Run implementations
-                double start_time = CycleTimer::currentSeconds();
-                test_2(transaction_Data);
-                double exec_time = CycleTimer::currentSeconds() - start_time;
-                cout << "Test case2 - " << thread_count << " thread: " << fixed << setprecision(4) << exec_time <<"s\n";
-                // cout << "skip test2." << endl;
+                //Run implementations
+                // double start_time = CycleTimer::currentSeconds();
+                // test_2(transaction_Data);
+                // double exec_time = CycleTimer::currentSeconds() - start_time;
+                // cout << "Test case2 - " << thread_count << " thread: " << fixed << setprecision(4) << exec_time <<"s\n";
+                cout << "skip test2." << endl;
 
-            } else if (entry.path() == "/workspace/FP-growth/dataset/test_data3.txt")
+            } else if (entry.path() == "/workspace/FP-growth/dataset/test_data3.txt"){
+                
                 // test_3(transaction_Data);
                 cout << "skip test3." << endl;
             
-            else
-                cout << "Unknown file name, no matching function." << endl;
+            } else {
             
+                // build the fptree
+                // double start_time = CycleTimer::currentSeconds();
+                // const FPTree fptree{ transaction_Data.transactions, minimum_support_threshold };
+                // double exec_time = CycleTimer::currentSeconds() - start_time;
+                
+                const FPTree fptree{ transaction_Data.transactions, minimum_support_threshold, fileName };
+                // cout << "Test " << fileName << " - " << thread_count << " thread: " << fixed << setprecision(4) << exec_time <<"s\n";
+                
+                // cout << "Unknown file name, no matching function." << endl;
+            
+            }
         }
         //break;
     }
