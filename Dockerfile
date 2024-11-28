@@ -30,7 +30,7 @@ RUN apt-get update && apt-get -y upgrade && \
     && rm -rf /var/lib/apt/lists/*
 
 # 安裝OpenMP庫
-RUN apt-get install -y libomp-dev
+RUN apt-get install -y libomp-dev libtbb-dev
 
 # 安裝OpenCL庫
 RUN apt-get install -y ocl-icd-libopencl1 opencl-headers clinfo

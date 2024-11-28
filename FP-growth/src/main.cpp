@@ -317,7 +317,7 @@ int main(int argc, char *argv[])
 
                 //Run implementations
                 // double start_time = CycleTimer::currentSeconds();
-                // test_1(transaction_Data);
+                // test_1(transaction_Data, fileName);
                 // double exec_time = CycleTimer::currentSeconds() - start_time;
                 // cout << "Test case1 - " << thread_count << " thread: " << fixed << setprecision(4) << exec_time <<"s\n";
                 cout << "skip test1." << endl;
@@ -326,14 +326,14 @@ int main(int argc, char *argv[])
 
                 //Run implementations
                 // double start_time = CycleTimer::currentSeconds();
-                // test_2(transaction_Data);
+                // test_2(transaction_Data, fileName);
                 // double exec_time = CycleTimer::currentSeconds() - start_time;
                 // cout << "Test case2 - " << thread_count << " thread: " << fixed << setprecision(4) << exec_time <<"s\n";
                 cout << "skip test2." << endl;
 
             } else if (entry.path() == "/workspace/FP-growth/dataset/test_data3.txt"){
                 
-                // test_3(transaction_Data);
+                // test_3(transaction_Data, fileName);
                 cout << "skip test3." << endl;
             
             } else {
@@ -345,8 +345,6 @@ int main(int argc, char *argv[])
                 
                 const FPTree fptree{ transaction_Data.transactions, minimum_support_threshold, fileName };
                 // cout << "Test " << fileName << " - " << thread_count << " thread: " << fixed << setprecision(4) << exec_time <<"s\n";
-                
-                // cout << "Unknown file name, no matching function." << endl;
             
             }
         }

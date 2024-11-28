@@ -23,68 +23,66 @@ FPNode::FPNode(const Item& item, const shared_ptr<FPNode>& parent) :
 }
 
 
-// map step: use to merge local fp tree 
-void merge_trees(shared_ptr<FPNode> global_root, shared_ptr<FPNode> local_root, map<Item, shared_ptr<FPNode>>& global_header_table, const map<Item, shared_ptr<FPNode>>& local_header_table)
+// reduce step: use to merge local fp tree 
+void merge_trees(shared_ptr<FPNode> global_root, shared_ptr<FPNode> local_root,
+                 map<Item, shared_ptr<FPNode>>& global_header_table,
+                 const map<Item, shared_ptr<FPNode>>& local_header_table)
 {
-
     // iterate each node from local root
     for (const auto& local_child_node : local_root->children) {
+        shared_ptr<FPNode> matching_child;
 
-        // find same node in global root
-        const auto it = find_if( global_root->children.begin(), global_root->children.end(),
-            [local_child_node](const shared_ptr<FPNode>& global_child_node) {
-                return global_child_node->item == local_child_node->item;
+        // set critical section global_root->children
+        #pragma omp critical(global_root_children)
+        {
+            // find same node in global root
+            auto it = find_if(global_root->children.begin(), global_root->children.end(),
+                [&local_child_node](const shared_ptr<FPNode>& global_child_node) {
+                    return global_child_node->item == local_child_node->item;
+                }
+            );
+
+            // successfully find the same node in global root children
+            if (it != global_root->children.end()) {
+
+                matching_child = *it;
+
+                // increase the frequency
+                matching_child->frequency += local_child_node->frequency;
+
+            // no same node in global root children
+            } else {
+
+                // copy local child node to global child node (set parent root)
+                auto new_child_node = make_shared<FPNode>(local_child_node->item, global_root);
+                new_child_node->frequency = local_child_node->frequency;
+                global_root->children.push_back(new_child_node);
+                matching_child = new_child_node;
+
+                // set critical section global_header_table 
+                #pragma omp critical(global_header_table)
+                {
+                    // update global header table
+                    if (global_header_table.count(new_child_node->item)) {
+                        auto current_node = global_header_table[new_child_node->item];
+                        
+                        // iterate until last item node
+                        while (current_node->node_link)
+                            current_node = current_node->node_link;
+                        
+                        current_node->node_link = new_child_node;
+                    } else {
+
+                        // directly update global header table
+                        global_header_table[new_child_node->item] = new_child_node;
+                    }
+                } // end global_header_table critical section
             }
-        );
+        } // end global_root_children critical section
 
-        // successfully find the same node in global root children
-        if(it != global_root->children.end()){
-
-            // increase the frequency
-            (*it)->frequency += local_child_node->frequency; 
-
-            // merge node
-            // auto global_current_node = (*it);
-            // while (global_current_node->node_link)
-            //     global_current_node = global_current_node->node_link;
-            
-            // global_current_node->node_link = local_child_node;
-
-            // recrusive to merge next child node
-            merge_trees(*it, local_child_node, global_header_table, local_header_table);
-
-        // no same node in global root children
-        }else{
-
-
-            // copy local child node to global child node (set parent root)
-            auto new_child_node = make_shared<FPNode>(local_child_node->item, global_root);
-            new_child_node->frequency = local_child_node->frequency;
-            global_root->children.push_back(new_child_node);
-
-            // update global header table
-            if (global_header_table.count(new_child_node->item)){
-                
-                auto current_node = global_header_table[new_child_node->item];
-                
-                // iterate until last item node
-                while (current_node->node_link) 
-                    current_node = current_node->node_link;
-                
-
-                current_node->node_link = new_child_node;
-
-            }else{
-                
-                // directly update global header table
-                global_header_table[new_child_node->item] = new_child_node;
-            }
-
-            merge_trees(new_child_node, local_child_node, global_header_table, local_header_table);
-        }
-
-    } 
-
+        // recrusive to merge next child node
+        merge_trees(matching_child, local_child_node, global_header_table, local_header_table);
+    }
 }
 
 
@@ -300,6 +298,7 @@ FPTree::FPTree(const vector<Transaction>& transactions, uint64_t minimum_support
     }
 
     // reduce step: merge all local fp tree and header table to global 
+    #pragma omp parallel for
     for (int tid = 0; tid < num_threads; tid++) {
         merge_trees(root, local_roots[tid], header_table, local_header_tables[tid]);
     }
