@@ -34,27 +34,26 @@ Compile the code using the appropriate options for C++11 (e.g. `-std=c++11` usin
     make
 
     # Run the parallel code on the dataset
-    ./main
+    ./main -t {number_of_threads}
     ```
 
 * If you are not using Docker, please ensure that your environment supports OpenMP and g++, then follow the instructions below
 
-* First: change the data file directory(data_folderPath) in main.cpp 
+   * First: change the data file directory(data_folderPath) in main.cpp 
 
-* Then
-    ```bash
-    # Navigate to the FP-growth directory
-    cd FP-growth
-
-    # Remove all compiled files
-    make clean
-
-    # Compile the program
-    make
-
-    # Run the parallel code on the dataset
-    ./main
-    ```
-
+   * Then
+       ```bash
+       # Navigate to the FP-growth directory
+       cd FP-growth
+   
+       # Remove all compiled files
+       make clean
+   
+       # Compile the program
+       make
+   
+       # Run the parallel code on the dataset
+       ./main -t {number_of_threads}
+       ```
 
 
