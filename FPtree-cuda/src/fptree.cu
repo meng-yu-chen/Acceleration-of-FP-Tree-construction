@@ -3,41 +3,128 @@
 #include <cstdint>
 #include <utility>
 
-#include "fptree.hpp"
+#include <cuda_runtime.h>
+#include <thrust/device_vector.h>
+#include <thrust/host_vector.h>
+#include <thrust/set_operations.h>
+#include <set>
+#include <vector>
+#include <map>
+#include <string>
+#include <cassert>
 
+#include "fptree.hpp"
+#include "CycleTimer.h"
 
 FPNode::FPNode(const Item& item, const std::shared_ptr<FPNode>& parent) :
     item( item ), frequency( 1 ), node_link( nullptr ), parent( parent ), children()
 {
 }
 
+__global__ void calculate_frequencies(const int* d_flattened_transactions, 
+                                      int num_transactions, 
+                                      int* d_frequency, 
+                                      int flattened_size) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < flattened_size) {
+        atomicAdd(&d_frequency[d_flattened_transactions[idx]], 1);
+    }
+}
+
+__global__ void filter_items(const int* d_frequency, 
+                             int* d_filtered_items, 
+                             int num_items, 
+                             int minimum_support_threshold) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < num_items) {
+        d_filtered_items[idx] = (d_frequency[idx] >= minimum_support_threshold) ? 1 : 0;
+    }
+}
+
 FPTree::FPTree(const std::vector<Transaction>& transactions, uint64_t minimum_support_threshold) :
     root( std::make_shared<FPNode>( Item{}, nullptr ) ), header_table(),
     minimum_support_threshold( minimum_support_threshold )
 {
-    // scan the transactions counting the frequency of each item
-    std::map<Item, uint64_t> frequency_by_item;
-    for ( const Transaction& transaction : transactions ) {
-        for ( const Item& item : transaction ) {
-            ++frequency_by_item[item];
+   //static int what = 0;
+    // Flatten transactions and prepare offsets
+    std::map<Item, int> item_to_index;
+    std::vector<int> flattened_transactions;
+    
+    int current_index = 0;
+
+    double startTime = CycleTimer::currentSeconds();
+
+    for (const auto& transaction : transactions) {
+        for (const auto& item : transaction) {
+            if (item_to_index.find(item) == item_to_index.end()) {
+                item_to_index[item] = current_index++;
+            }
+            flattened_transactions.push_back(item_to_index[item]);
         }
     }
 
-    // keep only items which have a frequency greater or equal than the minimum support threshold
-    for ( auto it = frequency_by_item.cbegin(); it != frequency_by_item.cend(); ) {
-        const uint64_t item_frequency = (*it).second;
-        if ( item_frequency < minimum_support_threshold ) { frequency_by_item.erase( it++ ); }
-        else { ++it; }
+    int num_items = item_to_index.size();
+    int flattened_size = flattened_transactions.size();
+
+    // Allocate CUDA memory
+    int* d_flattened_transactions;
+    int* d_frequency;
+    int* d_filtered_items;
+    cudaMalloc(&d_flattened_transactions, flattened_size * sizeof(int));
+    cudaMalloc(&d_frequency, num_items * sizeof(int));
+    cudaMalloc(&d_filtered_items, num_items * sizeof(int));
+    cudaMemset(d_frequency, 0, num_items * sizeof(int));
+
+    // Copy data to device
+    cudaMemcpy(d_flattened_transactions, flattened_transactions.data(), flattened_size * sizeof(int), cudaMemcpyHostToDevice);
+
+    // Launch frequency calculation kernel
+    int blockSize = 256;
+    int numBlocks = (flattened_size + blockSize - 1) / blockSize;
+    calculate_frequencies<<<numBlocks, blockSize>>>(d_flattened_transactions, 
+                                                    transactions.size(), 
+                                                    d_frequency, 
+                                                    flattened_size);
+    cudaDeviceSynchronize();
+
+    // Launch filtering kernel
+    numBlocks = (num_items + blockSize - 1) / blockSize;
+    filter_items<<<numBlocks, blockSize>>>(d_frequency, 
+                                           d_filtered_items, 
+                                           num_items, 
+                                           minimum_support_threshold);
+    cudaDeviceSynchronize();
+
+    // Copy filtered results back to host
+    std::vector<int> h_filtered_items(num_items);
+    cudaMemcpy(h_filtered_items.data(), d_filtered_items, num_items * sizeof(int), cudaMemcpyDeviceToHost);
+
+    // Create frequency_by_item map
+    std::map<Item, uint64_t> frequency_by_item;
+    for (const auto& [item, index] : item_to_index) {
+        if (h_filtered_items[index]) {
+            frequency_by_item[item] = h_filtered_items[index];
+        }
     }
 
-    // order items by decreasing frequency
-    struct frequency_comparator
-    {
-        bool operator()(const std::pair<Item, uint64_t> &lhs, const std::pair<Item, uint64_t> &rhs) const
-        {
+    // Clean up
+    cudaFree(d_flattened_transactions);
+    cudaFree(d_frequency);
+    cudaFree(d_filtered_items);
+
+    double endTime = CycleTimer::currentSeconds();
+    
+    //what++;
+    //printf("cuda time %d = %lf s\n", what, endTime - startTime);
+
+
+    // Order items by decreasing frequency (same as original code)
+    struct frequency_comparator {
+        bool operator()(const std::pair<Item, uint64_t>& lhs, const std::pair<Item, uint64_t>& rhs) const {
             return std::tie(lhs.second, lhs.first) > std::tie(rhs.second, rhs.first);
         }
     };
+
     std::set<std::pair<Item, uint64_t>, frequency_comparator> items_ordered_by_frequency(frequency_by_item.cbegin(), frequency_by_item.cend());
 
     // start tree construction
@@ -92,6 +179,8 @@ FPTree::FPTree(const std::vector<Transaction>& transactions, uint64_t minimum_su
     }
 }
 
+
+
 bool FPTree::empty() const
 {
     assert( root );
@@ -110,6 +199,8 @@ bool contains_single_path(const FPTree& fptree)
 {
     return fptree.empty() || contains_single_path( fptree.root );
 }
+
+
 
 std::set<Pattern> fptree_growth(const FPTree& fptree)
 {
@@ -243,3 +334,5 @@ std::set<Pattern> fptree_growth(const FPTree& fptree)
         return multi_path_patterns;
     }
 }
+
+

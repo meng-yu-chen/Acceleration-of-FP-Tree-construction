@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 #include <utility>
-#include <string>
+
 
 using Item = std::string;
 using Transaction = std::vector<Item>;
@@ -30,10 +30,9 @@ struct FPTree {
     std::shared_ptr<FPNode> root;
     std::map<Item, std::shared_ptr<FPNode>> header_table;
     uint64_t minimum_support_threshold;
-    std::string fileName;
 
-    FPTree(const std::vector<Transaction>&, uint64_t, std::string fileName = "");
-
+    FPTree(const std::vector<Transaction>&, uint64_t);
+    
     bool empty() const;
 };
 
