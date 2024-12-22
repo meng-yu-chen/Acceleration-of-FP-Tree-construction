@@ -85,9 +85,10 @@ Compile the code using the appropriate options for C++11 (e.g. `-std=c++11` usin
        ./tree {dataset.txt}       
  ```
 dataset:
-   igh_100.txt
-   low_100.txt
-   uniform100.txt
-   low_50.txt
-   high_50.txt
-   uniform50.txt
+   * test.txt
+   * high_100.txt
+   * low_100.txt
+   * uniform100.txt
+   * high_50.txt
+   * low_50.txt
+   * uniform50.txt
