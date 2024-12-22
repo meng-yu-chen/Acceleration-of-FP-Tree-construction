@@ -83,7 +83,7 @@ Compile the code using the appropriate options for C++11 (e.g. `-std=c++11` usin
 
        # Run the parallel code on the dataset
        ./tree {dataset.txt}       
-       ```
+ ```
 dataset:
    igh_100.txt
    low_100.txt
