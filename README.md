@@ -111,7 +111,7 @@ dataset:
    * Then
        ```bash
        # Navigate to the FP-growth directory
-       cd src
+       cd FPtree-MPI/src
    
        # Remove all compiled files
        make clean
