@@ -92,3 +92,33 @@ dataset:
    * high_50.txt
    * low_50.txt
    * uniform50.txt
+
+### branch - MPI
+
+* Use MPI to parallelize the FP-tree construction
+
+* Parallelize the process by dividing it into two parts:        
+    * Build frequency item set
+    
+    * Tree construction
+
+#### How to run the code
+
+* Please ensure that your environment supports MPI and g++, then follow the instructions below
+
+   * First: change the data file directory(data_folderPath) in MPI_main.cpp 
+
+   * Then
+       ```bash
+       # Navigate to the FP-growth directory
+       cd src
+   
+       # Remove all compiled files
+       make clean
+   
+       # Compile the program
+       make
+   
+       # Run the parallel code on the dataset
+      srun --mpi=pmix -n {number_of_processors} main
+       ```
