@@ -93,7 +93,7 @@ dataset:
    * low_50.txt
    * uniform50.txt
 
-### branch - MPI
+### branch - mpi
 
 * Use MPI to parallelize the FP-tree construction
 
